@@ -7,14 +7,14 @@ def generate_sequences(N, alpha, beta):
     
     mother[0] = 1 if random.random() < 0.5 else 0
     
-    # 2. Build the Mother sequence (The Rulebook)
+    # Build the Mother sequence (The Rulebook)
     for i in range(1, N):
         if mother[i-1] == 1:
             pass
         else: # mother[i-1] == 0
             pass
             
-    # 3. Build the Daughter sequence (The Z-Channel Wind)
+    # Build the Daughter sequence (The Z-Channel Noise)
     for i in range(N):
         if mother[i] == 1:
             if random.random() <= 0.5:
@@ -86,7 +86,7 @@ def run_viterbi_decoder(daughter_sequence, alpha, beta):
                 log_score_0 = path_d
                 backpointers[i][0] = 1
                 
-            # Hypothesis 2: Mother was a 1 today, but lost to wind (Emission P=0.5)
+            # Hypothesis 2: Mother was a 1 today, but lost to noise (Emission P=0.5)
             path_a = prev_0 + log_not_beta + log_half  # Jump to 1
             path_b = prev_1 + log_alpha + log_half     # Stay in 1
             
@@ -97,7 +97,7 @@ def run_viterbi_decoder(daughter_sequence, alpha, beta):
                 log_score_1 = path_b
                 backpointers[i][1] = 1
 
-    # 4. The Traceback Time Machine
+    # The Traceback
     mother_sequence = [0] * N
     
     # Find the absolute best ending state
