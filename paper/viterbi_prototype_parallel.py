@@ -2,13 +2,14 @@
 Ramakrishnan et al. (2022)
 SMAP/Viterbi decoder for epigenetic inheritance via parallelized Monte Carlo.
 """
-
+import os
 import math
 import random
 import numpy as np
 import matplotlib.pyplot as plt
 import concurrent.futures
 
+os.makedirs(os.path.join("paper", "output"), exist_ok=True)
 
 def generate_sequences(N, alpha, beta):
     """
@@ -117,7 +118,6 @@ if __name__ == "__main__":
     alphas = np.arange(0.10, 1.00, 0.1)
     betas  = np.arange(0.10, 1.00, 0.1)
     error_matrix = np.zeros((len(betas), len(alphas)))
-    print(error_matrix)
 
     tasks = [(i, j, a, b, N, TRIALS)
              for i, b in enumerate(betas)
@@ -145,7 +145,9 @@ if __name__ == "__main__":
     for i, b in enumerate(betas):
         for j, a in enumerate(alphas):
             print(f"alpha={a:.1f} beta={b:.1f} BER={error_matrix[i,j]:.4f}")
-            
+
+    fig3_path = os.path.join("paper", "output", "figure_3heatmap.png")
+
     plt.colorbar(label='Average Viterbi BER')
     plt.xticks(np.arange(0.1, 1.0, 0.1))
     plt.yticks(np.arange(0.1, 1.0, 0.1))
@@ -153,5 +155,5 @@ if __name__ == "__main__":
     plt.ylabel("β — P(stay unmodified)")
     plt.title(f"Figure 3 — Ramakrishnan et al. (2022)  [{TRIALS} trials, N={N}]")
     plt.tight_layout()
-    plt.savefig('figure_3_parallel_heatmap.png', dpi=150)
-    print("Saved figure_3_parallel_heatmap.png")
+    plt.savefig(fig3_path, dpi=150)
+    print(f"Saved {fig3_path}")
