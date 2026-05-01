@@ -110,16 +110,49 @@ def simulate_pixel(args):
 
     return (i, j, total_error / trials)
 
+def threshold_k_decoder(daughter_sequence, k):
+    """Fills zero-runs of length <= k flanked by two 1s."""
+    recon_mother = daughter_sequence[:]
+    i = 0
+    N = len(recon_mother)
+
+    while i < N:
+        if recon_mother[i] == 1:
+            j = i + 1
+            while j < N and recon_mother[j] == 0:
+                j += 1
+            gap_length = j - i - 1
+            if gap_length > 0 and j < N and gap_length <= k:
+                for x in range(i + 1, j):
+                    recon_mother[x] = 1
+            i = j
+        else:
+            i += 1
+
+    return recon_mother
+
+def simulate_threshold_k(args):
+    """Runs all trials for one threshold k and returns average BER."""
+    k, alpha, beta, N, trials = args
+    total_error = 0.0
+
+    for _ in range(trials):
+        mother, daughter = generate_sequences(N, alpha, beta)
+        recon_mother = threshold_k_decoder(daughter, k)
+        total_error += sum(1 for i in range(N) if mother[i] != recon_mother[i]) / N
+
+    return (k, total_error / trials)
+
 
 if __name__ == "__main__":
     N      = 1000
     TRIALS = 10000
 
-    alphas = np.arange(0.10, 1.00, 0.1)
-    betas  = np.arange(0.10, 1.00, 0.1)
+    alphas = np.arange(0.1, 1.0, 0.1)
+    betas  = np.arange(0.1, 1.0, 0.1)
     error_matrix = np.zeros((len(betas), len(alphas)))
 
-    tasks = [(i, j, a, b, N, TRIALS)
+    tasks = [(i, j, a, b, N, TRIALS) 
              for i, b in enumerate(betas)
              for j, a in enumerate(alphas)]
 
@@ -133,7 +166,7 @@ if __name__ == "__main__":
 
     plt.figure(figsize=(8, 6))
     plt.imshow(error_matrix, origin='lower', cmap='viridis_r',
-               vmin=0.0, vmax=0.30, extent=[0.1, 1.0, 0.1, 1.0], aspect='auto')
+               vmin=0.0, vmax=0.30, extent=[0.0, 1.0, 0.0, 1.0], aspect='auto')
 
     # Annotate each cell with its BER value
     for i in range(len(betas)):
@@ -149,11 +182,43 @@ if __name__ == "__main__":
     fig3_path = os.path.join("paper", "output", "figure_3heatmap.png")
 
     plt.colorbar(label='Average Viterbi BER')
-    plt.xticks(np.arange(0.1, 1.0, 0.1))
-    plt.yticks(np.arange(0.1, 1.0, 0.1))
+    plt.xticks(np.arange(0.0, 1.0, 0.1))
+    plt.yticks(np.arange(0.0, 1.0, 0.1))
     plt.xlabel("α — P(stay modified)")
     plt.ylabel("β — P(stay unmodified)")
     plt.title(f"Figure 3 — Ramakrishnan et al. (2022)  [{TRIALS} trials, N={N}]")
     plt.tight_layout()
     plt.savefig(fig3_path, dpi=150)
     print(f"Saved {fig3_path}")
+
+    # --- Figure 4B: BER vs threshold k (fixed alpha=0.9, beta=0.9) ---
+    alpha_4b = 0.9
+    beta_4b  = 0.9
+    k_values = range(0, 21)
+
+    tasks_4b = [(k, alpha_4b, beta_4b, N, 1000) for k in k_values]
+
+    ber_results = {}
+    print("Running Figure 4B sweep...")
+
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        for k, avg_error in executor.map(simulate_threshold_k, tasks_4b):
+            ber_results[k] = avg_error
+
+    ks   = sorted(ber_results.keys())
+    bers = [ber_results[k] for k in ks]
+    
+    fig4b_path = os.path.join("paper", "output", "figure_4b.png")
+
+    print("k\tBER")
+    for k, b in zip(ks, bers):
+        print(f"{k}\t{b:.4f}")
+
+    plt.figure(figsize=(7, 5))
+    plt.plot(ks, bers, marker='o')
+    plt.xlabel("Threshold k")
+    plt.ylabel("Average BER")
+    plt.title(f"Figure 4B — Ramakrishnan et al. (2022)  [α={alpha_4b}, β={beta_4b}]")
+    plt.tight_layout()
+    plt.savefig(fig4b_path, dpi=150)
+    print(f"Saved {fig4b_path}")
